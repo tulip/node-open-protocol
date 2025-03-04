@@ -1166,6 +1166,12 @@ class SessionControlClient extends EventEmitter {
    */
   _onErrorLinkLayer(err) {
     debug("SessionControlClient _onErrorLinkLayer", err);
+
+    if (this.midInProcess) {
+      this.midInProcess.doCallback(err);
+    }
+
+    this.emit("error", err);
     this.close(err);
   }
 
