@@ -13,11 +13,11 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-"use strict";
+'use strict';
 /*jshint esversion: 6, node: true*/
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 const codes = require('./constants.json');
 const encoding = codes.defaultEncoder;
 
@@ -33,9 +33,9 @@ let midList;
  * @returns {String}
  */
 function padLeft(n, size, base, elm, trimLeft) {
-    n = n.toString(base || 10);
-    n = trimLeft ? n.substring(n.length - size) : n.substring(0, size);
-    return new Array(size - n.length + 1).join(elm || '0').concat(n);
+  n = n.toString(base || 10);
+  n = trimLeft ? n.substring(n.length - size) : n.substring(0, size);
+  return new Array(size - n.length + 1).join(elm || '0').concat(n);
 }
 
 /**
@@ -48,9 +48,9 @@ function padLeft(n, size, base, elm, trimLeft) {
  * @returns {String}
  */
 function padRight(n, size, base, elm, trimLeft) {
-    n = n.toString(base || 10);
-    n = trimLeft ? n.substring(n.length - size) : n.substring(0, size);
-    return n.concat(new Array(size - n.length + 1).join(elm || '0'));
+  n = n.toString(base || 10);
+  n = trimLeft ? n.substring(n.length - size) : n.substring(0, size);
+  return n.concat(new Array(size - n.length + 1).join(elm || '0'));
 }
 
 /**
@@ -58,26 +58,82 @@ function padRight(n, size, base, elm, trimLeft) {
  * @returns {Array}
  */
 function getMids() {
-
-    if (midList) {
-        return midList;
-    }
-
-    midList = [];
-
-    const listFiles = fs.readdirSync(path.join(__dirname, ".", "mid"));
-
-    listFiles.forEach((file) => {
-
-        if (path.extname(file) !== ".js") {
-            return;
-        }
-
-        midList[Number(path.basename(file, ".js"))] = require("./mid/" + file);
-
-    });
-
+  if (midList) {
     return midList;
+  }
+
+  midList = [];
+
+  const listFiles = [
+    '0002',
+    '0003',
+    '0004',
+    '0005',
+    '0006',
+    '0008',
+    '0009',
+    '0010',
+    '0015',
+    '0018',
+    '0019',
+    '0020',
+    '0022',
+    '0025',
+    '0030',
+    '0035',
+    '0038',
+    '0039',
+    '0040',
+    '0042',
+    '0043',
+    '0044',
+    '0050',
+    '0052',
+    '0061',
+    '0064',
+    '0065',
+    '0071',
+    '0074',
+    '0076',
+    '0080',
+    '0081',
+    '0082',
+    '0091',
+    '0106',
+    '0113',
+    '0121',
+    '0127',
+    '0128',
+    '0131',
+    '0132',
+    '0133',
+    '0152',
+    '0155',
+    '0156',
+    '0157',
+    '0211',
+    '0242',
+    '0251',
+    '0260',
+    '0262',
+    '0270',
+    '0401',
+    '0410',
+    '0421',
+    '0501',
+    '0504',
+    '0900',
+    '2600',
+    '9997',
+    '9998',
+    '9999',
+  ];
+
+  listFiles.forEach((file) => {
+    midList[Number(file)] = require('./mid/' + file + '.js');
+  });
+
+  return midList;
 }
 
 /**
@@ -88,50 +144,51 @@ function getMids() {
  * The [cb] function is called in cases of an error, sending the error as parameter.
  * The return of this function is a boolean, true: the process without errors or false: the process with an error.
  *
- * @param {object} message 
- * @param {buffer} buffer 
- * @param {string} parameter 
- * @param {string} type 
- * @param {number} length 
- * @param {object} position 
- * @param {Function} cb 
+ * @param {object} message
+ * @param {buffer} buffer
+ * @param {string} parameter
+ * @param {string} type
+ * @param {number} length
+ * @param {object} position
+ * @param {Function} cb
  * @returns {boolean}
  */
 function serializerField(message, buffer, parameter, type, length, position, cb) {
+  position.value -= length;
 
-    position.value -= length;
+  if (message.payload[parameter] === undefined) {
+    cb(new Error(`[Serializer] MID[${message.mid}] parameter [${parameter}] not exist`));
+    return false;
+  }
 
-    if (message.payload[parameter] === undefined) {
-        cb(new Error(`[Serializer] MID[${message.mid}] parameter [${parameter}] not exist`));
+  switch (type) {
+    case 'string':
+      buffer.write(padRight(message.payload[parameter], length, 10, ' '), position.value, encoding);
+      break;
+
+    case 'rawString':
+      buffer.write(padRight(message.payload[parameter], length, 10, ' '), position.value, encoding);
+      break;
+
+    case 'number':
+      if (isNaN(message.payload[parameter])) {
+        cb(
+          new Error(
+            `[Serializer] MID[${message.mid}] - type invalid isNaN - parameter: [${parameter}] value: [${message.payload[parameter]}] `,
+          ),
+        );
         return false;
-    }
+      }
 
-    switch (type) {
+      buffer.write(padLeft(message.payload[parameter], length), position.value, encoding);
+      break;
 
-        case "string":
-            buffer.write(padRight(message.payload[parameter], length, 10, " "), position.value, encoding);
-            break;
+    default:
+      cb(new Error(`[Serializer] MID[${message.mid}] - type is not defined`));
+      return false;
+  }
 
-        case "rawString":
-            buffer.write(padRight(message.payload[parameter], length, 10, " "), position.value, encoding);
-            break;
-
-        case "number":
-
-            if (isNaN(message.payload[parameter])) {
-                cb(new Error(`[Serializer] MID[${message.mid}] - type invalid isNaN - parameter: [${parameter}] value: [${message.payload[parameter]}] `));
-                return false;
-            }
-
-            buffer.write(padLeft(message.payload[parameter], length), position.value, encoding);
-            break;
-
-        default:
-            cb(new Error(`[Serializer] MID[${message.mid}] - type is not defined`));
-            return false;
-    }
-
-    return true;
+  return true;
 }
 
 /**
@@ -142,26 +199,25 @@ function serializerField(message, buffer, parameter, type, length, position, cb)
  * The [cb] function is called in cases of error, sending the error as parameter.
  * The return of this function is boolean, true: the process without errors or false: the process with an error.
  *
- * @param {object} message 
- * @param {buffer} buffer 
- * @param {number} key 
- * @param {number} length 
- * @param {object} position 
- * @param {Function} cb 
+ * @param {object} message
+ * @param {buffer} buffer
+ * @param {number} key
+ * @param {number} length
+ * @param {object} position
+ * @param {Function} cb
  * @returns {boolean}
  */
 function serializerKey(message, buffer, key, length, position, cb) {
+  position.value -= length;
 
-    position.value -= length;
+  if (isNaN(key)) {
+    cb(new Error(`[Serializer] MID[${message.mid}] key invalid [${key}]`));
+    return false;
+  }
 
-    if (isNaN(key)) {
-        cb(new Error(`[Serializer] MID[${message.mid}] key invalid [${key}]`));
-        return false;
-    }
+  buffer.write(padLeft(key, length), position.value, encoding);
 
-    buffer.write(padLeft(key, length), position.value, encoding);
-
-    return true;
+  return true;
 }
 
 /**
@@ -175,47 +231,57 @@ function serializerKey(message, buffer, key, length, position, cb) {
  * @param {object} message Object in use for update
  * @param {buffer} buffer Buffer with content for extracting information
  * @param {string} parameter Name of parameter extracted
- * @param {string} parameterType Type of information extracted "string" | "rawString" | "number"  
+ * @param {string} parameterType Type of information extracted "string" | "rawString" | "number"
  * @param {number} parameterLength Size of information extracted
  * @param {object} position Position on buffer this information {value: position}
  * @param {Function} cb
  * @returns {boolean} status process
  */
 function processParser(message, buffer, parameter, parameterType, parameterLength, position, cb) {
+  let length = parameterLength;
+  parameterLength = position.value + parameterLength;
 
-    let length = parameterLength;
-    parameterLength = position.value + parameterLength;
+  switch (parameterType) {
+    case 'string':
+      message.payload[parameter] = buffer
+        .toString(encoding, position.value, parameterLength)
+        .trim();
+      break;
 
-    switch (parameterType) {
-        case "string":
-            message.payload[parameter] = buffer.toString(encoding, position.value, parameterLength).trim();
-            break;
+    case 'rawString':
+      message.payload[parameter] = buffer.toString(encoding, position.value, parameterLength);
+      if (message.payload[parameter].length !== length) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      break;
 
-        case "rawString":
-            message.payload[parameter] = buffer.toString(encoding, position.value, parameterLength);
-            if (message.payload[parameter].length !== length) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            break;
+    case 'number':
+      message.payload[parameter] = Number(
+        buffer.toString(encoding, position.value, parameterLength),
+      );
+      if (isNaN(message.payload[parameter])) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      break;
 
-        case "number":
-            message.payload[parameter] = Number(buffer.toString(encoding, position.value, parameterLength));
-            if (isNaN(message.payload[parameter])) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            break;
+    default:
+      cb(new Error(`invalid parameterType`));
+      return false;
+  }
 
-        default:
-            cb(new Error(`invalid parameterType`));
-            return false;
+  position.value = parameterLength;
 
-    }
-
-    position.value = parameterLength;
-
-    return true;
+  return true;
 }
 
 /**
@@ -225,29 +291,36 @@ function processParser(message, buffer, parameter, parameterType, parameterLengt
  * The return of this function is boolean, true: the value extracted is equal [key] or false: case not.
  * The [cb] function is called in cases of error, sending the error as parameter.
  *
- * @param {object} object 
- * @param {buffer} buffer 
- * @param {string} parameter 
- * @param {number} key 
- * @param {number} keyLength 
- * @param {number} keyPosition 
- * @param {Function} cb 
+ * @param {object} object
+ * @param {buffer} buffer
+ * @param {string} parameter
+ * @param {number} key
+ * @param {number} keyLength
+ * @param {number} keyPosition
+ * @param {Function} cb
  * @returns {boolean}
  */
 function processKey(object, buffer, parameter, key, keyLength, keyPosition, cb) {
+  keyLength = keyPosition.value + keyLength;
 
-    keyLength = keyPosition.value + keyLength;
+  let receiver = Number(buffer.toString(encoding, keyPosition.value, keyLength));
 
-    let receiver = Number(buffer.toString(encoding, keyPosition.value, keyLength));
+  if (receiver !== key) {
+    cb(
+      new Error(
+        `invalid key, mid: ${
+          object.mid
+        }, parameter: ${parameter}, expect: ${key}, receiver: ${receiver} payload: ${JSON.stringify(
+          object.payload,
+        )}`,
+      ),
+    );
+    return false;
+  }
 
-    if (receiver !== key) {
-        cb(new Error(`invalid key, mid: ${object.mid}, parameter: ${parameter}, expect: ${key}, receiver: ${receiver} payload: ${JSON.stringify(object.payload)}`));
-        return false;
-    }
+  keyPosition.value = keyLength;
 
-    keyPosition.value = keyLength;
-
-    return true;
+  return true;
 }
 
 /**
@@ -264,15 +337,18 @@ function processKey(object, buffer, parameter, key, keyLength, keyPosition, cb) 
  * @returns {boolean}
  */
 function testNul(object, buffer, parameter, position, cb) {
+  if (buffer[position.value] !== 0) {
+    cb(
+      new Error(
+        `invalid value, mid: ${object.mid}, parameter: ${parameter}, payload: ${object.payload}`,
+      ),
+    );
+    return false;
+  }
 
-    if (buffer[position.value] !== 0) {
-        cb(new Error(`invalid value, mid: ${object.mid}, parameter: ${parameter}, payload: ${object.payload}`));
-        return false;
-    }
+  position.value += 1;
 
-    position.value += 1;
-
-    return true;
+  return true;
 }
 
 /**
@@ -281,91 +357,112 @@ function testNul(object, buffer, parameter, position, cb) {
  *
  * The [cb] function is called in cases of error, sending the error as parameter.
  * The return of this function is boolean, true: the process without errors or false: the process with an error.
- * 
+ *
  * @see Specification OpenProtocol_Specification_R_2_8_0_9836 4415 01.pdf Page 34
- * 
- * @param {object} message 
- * @param {buffer} buffer 
- * @param {string} parameter 
- * @param {number} count 
- * @param {object} position 
- * @param {Function} cb 
+ *
+ * @param {object} message
+ * @param {buffer} buffer
+ * @param {string} parameter
+ * @param {number} count
+ * @param {object} position
+ * @param {Function} cb
  * @returns {boolean}
  */
 function processDataFields(message, buffer, parameter, count, position, cb) {
+  let control = 0;
 
-    let control = 0;
+  if (count > 0) {
+    message.payload[parameter] = [];
 
-    if (count > 0) {
+    while (control < count) {
+      let dataFields = {};
 
-        message.payload[parameter] = [];
+      let parameterID = buffer.toString(encoding, position.value, position.value + 5).trim();
 
-        while (control < count) {
+      if (parameterID === '' || isNaN(Number(parameterID)) || Number(parameterID) < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter} - parameterID, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      dataFields.parameterID = parameterID;
+      dataFields.parameterName = codes.PID[parameterID] || '';
+      position.value += 5;
 
-            let dataFields = {};
+      let length = Number(buffer.toString(encoding, position.value, position.value + 3));
 
-            let parameterID = buffer.toString(encoding, position.value, position.value + 5).trim();
+      if (isNaN(length) || length < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter} - length, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      dataFields.length = length;
+      position.value += 3;
 
-            if (parameterID === "" || isNaN(Number(parameterID)) || Number(parameterID) < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter} - parameterID, payload: ${message.payload}`));
-                return false;
-            }
-            dataFields.parameterID = parameterID;
-            dataFields.parameterName = codes.PID[parameterID] || "";
-            position.value += 5;
+      let dataType = Number(buffer.toString(encoding, position.value, position.value + 2));
 
-            let length = Number(buffer.toString(encoding, position.value, position.value + 3));
+      if (isNaN(dataType) || dataType < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter} - dataType, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      dataFields.dataType = dataType;
+      position.value += 2;
 
-            if (isNaN(length) || length < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter} - length, payload: ${message.payload}`));
-                return false;
-            }
-            dataFields.length = length;
-            position.value += 3;
+      let unit = buffer.toString(encoding, position.value, position.value + 3).trim();
 
-            let dataType = Number(buffer.toString(encoding, position.value, position.value + 2));
+      if (unit === '' || isNaN(Number(unit)) || Number(unit) < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter} - unit, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      dataFields.unit = unit;
+      dataFields.unitName = codes.UNIT[unit] || '';
+      position.value += 3;
 
-            if (isNaN(dataType) || dataType < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter} - dataType, payload: ${message.payload}`));
-                return false;
-            }
-            dataFields.dataType = dataType;
-            position.value += 2;
+      let stepNumber = Number(buffer.toString(encoding, position.value, position.value + 4));
 
-            let unit = buffer.toString(encoding, position.value, position.value + 3).trim();
+      if (isNaN(stepNumber) || stepNumber < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter} - stepNumber, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      dataFields.stepNumber = stepNumber;
+      position.value += 4;
 
-            if (unit === "" || isNaN(Number(unit)) || Number(unit) < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter} - unit, payload: ${message.payload}`));
-                return false;
-            }
-            dataFields.unit = unit;
-            dataFields.unitName = codes.UNIT[unit] || "";
-            position.value += 3;
+      let dataValue = buffer.toString(encoding, position.value, position.value + length).trim();
 
-            let stepNumber = Number(buffer.toString(encoding, position.value, position.value + 4));
+      if (dataValue === '') {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter} - dataValue, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      dataFields.dataValue = dataValue;
+      position.value += length;
 
-            if (isNaN(stepNumber) || stepNumber < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter} - stepNumber, payload: ${message.payload}`));
-                return false;
-            }
-            dataFields.stepNumber = stepNumber;
-            position.value += 4;
+      message.payload[parameter].push(dataFields);
 
-            let dataValue = buffer.toString(encoding, position.value, position.value + length).trim();
-
-            if (dataValue === "") {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter} - dataValue, payload: ${message.payload}`));
-                return false;
-            }
-            dataFields.dataValue = dataValue;
-            position.value += length;
-
-            message.payload[parameter].push(dataFields);
-
-            control += 1;
-        }
+      control += 1;
     }
-    return true;
+  }
+  return true;
 }
 
 /**
@@ -376,99 +473,120 @@ function processDataFields(message, buffer, parameter, count, position, cb) {
  * The return of this function is boolean, true: the process without errors or false: the process with an error.
  *
  * @see Specification OpenProtocol_Specification_R_2_8_0_9836 4415 01.pdf Page 260
- * 
- * @param {object} message 
- * @param {buffer} buffer 
- * @param {string} parameter 
- * @param {number} count 
- * @param {object} position 
- * @param {function} cb 
+ *
+ * @param {object} message
+ * @param {buffer} buffer
+ * @param {string} parameter
+ * @param {number} count
+ * @param {object} position
+ * @param {function} cb
  * @returns {boolean}
  */
 function processResolutionFields(message, buffer, parameter, count, position, cb) {
+  let control = 0;
 
-    let control = 0;
+  if (count > 0) {
+    message.payload[parameter] = [];
 
-    if (count > 0) {
+    while (control < count) {
+      let resolutionFields = {};
 
-        message.payload[parameter] = [];
+      let firstIndex = Number(buffer.toString(encoding, position.value, position.value + 5));
 
-        while (control < count) {
+      if (isNaN(firstIndex) || firstIndex < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      resolutionFields.firstIndex = firstIndex;
+      position.value += 5;
 
-            let resolutionFields = {};
+      let lastIndex = Number(buffer.toString(encoding, position.value, position.value + 5));
 
-            let firstIndex = Number(buffer.toString(encoding, position.value, position.value + 5));
+      if (isNaN(lastIndex) || lastIndex < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      resolutionFields.lastIndex = lastIndex;
+      position.value += 5;
 
-            if (isNaN(firstIndex) || firstIndex < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            resolutionFields.firstIndex = firstIndex;
-            position.value += 5;
- 
-            let lastIndex = Number(buffer.toString(encoding, position.value, position.value + 5));
+      let length = Number(buffer.toString(encoding, position.value, position.value + 3));
 
-            if (isNaN(lastIndex) || lastIndex < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            resolutionFields.lastIndex = lastIndex;
-            position.value += 5;
- 
-            let length = Number(buffer.toString(encoding, position.value, position.value + 3));
+      if (isNaN(length) || length < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      resolutionFields.length = length;
+      position.value += 3;
 
-            if (isNaN(length) || length < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            resolutionFields.length = length;
-            position.value += 3;
+      let dataType = Number(buffer.toString(encoding, position.value, position.value + 2));
 
-            let dataType = Number(buffer.toString(encoding, position.value, position.value + 2));
+      if (isNaN(dataType) || dataType < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      resolutionFields.dataType = dataType;
+      position.value += 2;
 
-            if (isNaN(dataType) || dataType < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            resolutionFields.dataType = dataType;
-            position.value += 2;
+      let unit = buffer.toString(encoding, position.value, position.value + 3).trim();
 
-            let unit = buffer.toString(encoding, position.value, position.value + 3).trim();
+      if (unit === '' || isNaN(Number(unit)) || Number(unit) < 0) {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      resolutionFields.unit = unit;
+      resolutionFields.unitName = codes.UNIT[unit] || '';
+      position.value += 3;
 
-            if (unit === "" || isNaN(Number(unit)) || Number(unit) < 0) {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            resolutionFields.unit = unit;
-            resolutionFields.unitName = codes.UNIT[unit] || "";
-            position.value += 3;
+      let timeValue = buffer.toString(encoding, position.value, position.value + length).trim();
 
-            let timeValue = buffer.toString(encoding, position.value, position.value + length).trim();
+      if (timeValue === '') {
+        cb(
+          new Error(
+            `invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`,
+          ),
+        );
+        return false;
+      }
+      resolutionFields.timeValue = timeValue;
+      position.value += length;
 
-            if (timeValue === "") {
-                cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
-                return false;
-            }
-            resolutionFields.timeValue = timeValue;
-            position.value += length;
+      message.payload[parameter].push(resolutionFields);
 
-            message.payload[parameter].push(resolutionFields);
-
-            control += 1;
-        }
+      control += 1;
     }
-    return true;
+  }
+  return true;
 }
 
 module.exports = {
-    getMids,
-    testNul,
-    padLeft,
-    padRight,
-    processKey,
-    processParser,
-    processDataFields,
-    processResolutionFields: processResolutionFields,
-    serializerField,
-    serializerKey
+  getMids,
+  testNul,
+  padLeft,
+  padRight,
+  processKey,
+  processParser,
+  processDataFields,
+  processResolutionFields: processResolutionFields,
+  serializerField,
+  serializerKey,
 };
