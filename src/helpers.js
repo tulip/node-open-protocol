@@ -130,7 +130,9 @@ function getMids() {
   ];
 
   listFiles.forEach((file) => {
+    try {
     midList[Number(file)] = require('./mid/' + file + '.js');
+    } catch(err){}
   });
 
   return midList;
