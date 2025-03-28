@@ -128,9 +128,13 @@ function getMids() {
     '9998',
     '9999',
   ];
-  try {
-    midList[Number(file)] = require('./mid/' + file + '.js');
-    } catch(err){}
+
+  listFiles.forEach((file) => {
+    try {
+        midList[Number(file)] = require('./mid/' + file + '.js');
+        console.log(`[] midlist is ${JSON.stringify(midList)}`)
+        } catch(err){}
+  });
 
   return midList;
 }
