@@ -417,7 +417,9 @@ class LinkLayer extends Duplex {
     destroyStream(this.midParser);
     destroyStream(this.midSerializer);
 
-    cb?.(err);
+    if (cb) {
+      cb(err);
+    }
   }
 
   finishCycle(err) {
