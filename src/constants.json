@@ -337,6 +337,14 @@
         "924": "ozf / ms",
         "925": "MN / ms"
     },
+    "TRACE_TYPE": {
+        "1": "Angle",
+        "2": "Torque",
+        "3": "Current",
+        "4": "Gradient",
+        "5": "Stroke",
+        "6": "Force"
+    },
     "ERROR": {
         "00": "No Error",
         "01": "Invalid data",

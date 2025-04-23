@@ -1,3 +1,4 @@
+//@ts-check
 /*
    Copyright 2018 Smart-Tech Controle e Automação
 
@@ -77,6 +78,8 @@ const testNul = helpers.testNul;
 const processParser = helpers.processParser;
 const processDataFields = helpers.processDataFields;
 const processResolutionFields = helpers.processResolutionFields;
+const processTraceSamples = helpers.processTraceSamples;
+const serializerField = helpers.serializerField;
 
 function parser(msg, opts, cb){
       
@@ -102,7 +105,7 @@ function parser(msg, opts, cb){
             processResolutionFields(msg, buffer, "resolutionFields", msg.payload.numberResolution, position, cb) &&
             processParser(msg, buffer, "numberTrace", "number", 5, position, cb) &&
             testNul(msg, buffer, "char nul", position, cb) &&          
-            processParser(msg, buffer, "traceSample", "string", 2, position, cb) &&
+            processTraceSamples(msg, buffer, "sampleTrace", msg.payload.numberTrace, position, msg.payload.timeStamp, msg.payload.resolutionFields[0].timeValue, msg.payload.resolutionFields[0].unit, cb) &&
             cb(null, msg);
 
         break;
@@ -110,104 +113,76 @@ function parser(msg, opts, cb){
 }
 
 function serializer(msg, opts, cb){
-
-    let info = msg.payload;
     let buf;
+    let statusprocess = false;
 
-    switch(msg.revision){
-      
-        case 1: 
+    let position = {
+        value: 0,
+    };
 
-            //Calc alloc
-            //Message Base (50)
-            //fieldPID
-            //fieldData (17 + length) x numberPID 
-            //resolutionFields (18 + length) x numberResolution
+    if (msg.isAck) {
+        msg.mid = 5;
+        let buf = Buffer.from("0900");
+        msg.payload = buf;
+        cb(null, msg);
+        return;
+    }
 
-            let size = 50;
+    msg.revision = msg.revision || 1;
 
-            if(info.dataFields.length > 0){
-                for(let x = 0; x < info.dataFields.length; x++){
-                    size += info.dataFields[x].length;                    
-                }
-            }
-            size += (17 * info.dataFields.length);
+    // Automatic subscription to last 3 curves: Angle, Torque and Current. Payload not needed.
+    /* {
+       msg.payload.midNumber = 0900;
+       msg.payload.dataLength = 41;
+       msg.payload.extraData = "00000000000000000000000000000003001002003";
+       msg.payload.revision = 1;
+       msg.payload.midNumber = 0900;
+       }*/
 
-            if(info.resolutionFields.length > 0){
-                for(let x = 0; x < info.resolutionFields.length; x++){
-                    size += info.resolutionFields[x].length;
-                }
-            }
-            size += (18 * info.resolutionFields.length);
+    switch (msg.revision) {
+      case 1:
+          msg.mid = 8;
 
-            buf = Buffer.alloc(size);
+          // Automatic subscription to last 3 curves: Angle, Torque and Current. Payload not needed.
+          if ((msg.payload.midNumber || msg.payload.dataLength || msg.payload.extraData || msg.payload.revision) === undefined) {
+              buf = Buffer.from("09000014100000000000000000000000000000003001002003");
+          } else {
+              buf = Buffer.alloc(9 + msg.payload.dataLength);
+              position.value = 9 + msg.payload.dataLength;
+              statusprocess =
+                  serializerField(msg, buf, "extraData", "string", msg.payload.dataLength, position, cb) &&
+                  serializerField(msg, buf, "dataLength", "number", 2, position, cb) &&
+                  serializerField(msg, buf, "revision", "number", 3, position, cb) &&
+                  serializerField(msg, buf, "midNumber", "number", 4, position, cb);
 
-            let pos = 0;
+              if (!statusprocess) {
+                  return;
+              }
+          }
 
-            buf.write(padLeft(info.resultID, 10), pos, "ascii");
-            pos += 10;
+          msg.payload = buf;
 
-            buf.write(padRight(info.timeStamp, 19, 10, " "), pos, "ascii");
-            pos += 19;
+          cb(null, msg);
 
-            buf.write(padLeft(info.numberPID, 3), pos, "ascii");
-            pos += 3;
+          break;
 
-            //info.dataFields
-            if(info.numberPID > 0){
-                for(let x = 0; x < info.numberPID; x++){
-                   
-                    buf.write(padLeft(info.dataFields[x].parameterID, 5), pos, "ascii");
-                    pos += 5;
+      default:
+          cb(
+              new Error(
+                  `[Serializer MID${msg.mid}] invalid revision [${msg.revision}]`
+              )
+          );
+          break;
+    }
 
-                    buf.write(padLeft(info.dataFields[x].length, 3), pos, "ascii");
-                    pos += 3;
+}
 
-                    buf.write(padLeft(info.dataFields[x].dataType, 2), pos, "ascii");
-                    pos += 2;
-
-                    buf.write(padLeft(info.dataFields[x].unit, 3), pos, "ascii");
-                    pos += 3;
-
-                    buf.write(padLeft(info.dataFields[x].stepNumber, 4), pos, "ascii");
-                    pos += 4;
-
-                    buf.write(padRight(info.dataValue, info.dataFields[x].length, 10, " "), pos, "ascii");
-                    pos += info.dataFields[x].length;            
-                    
-                }
-            }
-
-            buf.write(padLeft(info.traceType, 2), pos, "ascii");
-            pos += 2;
-
-            buf.write(padLeft(info.transducerType, 2), pos, "ascii");
-            pos += 2;
-            
-            buf.write(padLeft(info.unit, 3), pos, "ascii");
-            pos += 3;
-
-            buf.write(padLeft(info.numberResolution, 3), pos, "ascii");
-            pos += 3;
-
-
-            
-
-
-
-
-
-
-        break;
-
-        }
-    
-    msg.payload = buf;
-
-    cb(null, msg);
+function revision() {
+    return [1];
 }
 
 module.exports = {
     parser, 
-    serializer
+    serializer,
+    revision
 };
