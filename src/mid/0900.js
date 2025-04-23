@@ -81,6 +81,9 @@ const processResolutionFields = helpers.processResolutionFields;
 const processTraceSamples = helpers.processTraceSamples;
 const serializerField = helpers.serializerField;
 
+const MID5 = require("./0005.js");
+const MID8 = require("./0008.js");
+
 function parser(msg, opts, cb){
       
     let buffer = msg.payload;
@@ -113,7 +116,7 @@ function parser(msg, opts, cb){
 }
 
 function serializer(msg, opts, cb){
-    let buf;
+    let extraData;
     let statusprocess = false;
 
     let position = {
@@ -121,57 +124,48 @@ function serializer(msg, opts, cb){
     };
 
     if (msg.isAck) {
+        // MID 900 subscription data acknowledge should be sent as a MID 5 message.
         msg.mid = 5;
-        let buf = Buffer.from("0900");
-        msg.payload = buf;
-        cb(null, msg);
-        return;
+        msg.payload = {};
+        msg.payload.midNumber = 900;
+        msg.revision = 1;
+        return MID5.serializer(msg, {}, cb);
     }
 
     msg.revision = msg.revision || 1;
 
-    // Automatic subscription to last 3 curves: Angle, Torque and Current. Payload not needed.
-    /* {
-       msg.payload.midNumber = 0900;
-       msg.payload.dataLength = 41;
-       msg.payload.extraData = "00000000000000000000000000000003001002003";
-       msg.payload.revision = 1;
-       msg.payload.midNumber = 0900;
-       }*/
-
     switch (msg.revision) {
       case 1:
-          msg.mid = 8;
-
-          // Automatic subscription to last 3 curves: Angle, Torque and Current. Payload not needed.
-          if ((msg.payload.midNumber || msg.payload.dataLength || msg.payload.extraData || msg.payload.revision) === undefined) {
-              buf = Buffer.from("09000014100000000000000000000000000000003001002003");
-          } else {
-              buf = Buffer.alloc(9 + msg.payload.dataLength);
-              position.value = 9 + msg.payload.dataLength;
-              statusprocess =
-                  serializerField(msg, buf, "extraData", "string", msg.payload.dataLength, position, cb) &&
-                  serializerField(msg, buf, "dataLength", "number", 2, position, cb) &&
-                  serializerField(msg, buf, "revision", "number", 3, position, cb) &&
-                  serializerField(msg, buf, "midNumber", "number", 4, position, cb);
-
-              if (!statusprocess) {
-                  return;
-              }
+          if (!msg.payload.traceTypes || msg.payload.traceTypes.length === 0) {
+              cb(new Error(`[Serializer MID${msg.mid}] no trace types provided`));
+              return;
           }
 
-          msg.payload = buf;
+          // OpenProtocolSpecification_R280.pdf - Page 261
+          // [0]     - 0 = "Only send new data"
+          // [1-29]  - Data ID time stamp type, index type -- okay to leave blank
+          // [30-31] - Number of trace types
+          // [32..]  - Trace types (001, 002, ...)
+          extraData = Buffer.alloc(32 + msg.payload.traceTypes.length * 3);
+          extraData.write("0", 0);
+          extraData.fill(" ", 1, 30);
+          extraData.write(padLeft(msg.payload.traceTypes.length, 2, 10), 30);
+          for (let i = 0; i < msg.payload.traceTypes.length; i++) {
+              extraData.write(padLeft(msg.payload.traceTypes[i], 3, 10), 32 + i * 3);
+          }
 
-          cb(null, msg);
-
-          break;
+          // MID 900 subscription request should be sent as a MID 8 message.
+          msg.mid = 8;
+          msg.payload = {};
+          msg.payload.midNumber = 900;
+          msg.payload.revision = 1;
+          msg.payload.dataLength = extraData.length;
+          msg.payload.extraData = extraData.toString('ascii');
+          msg.revision = 1;
+          return MID8.serializer(msg, {}, cb);
 
       default:
-          cb(
-              new Error(
-                  `[Serializer MID${msg.mid}] invalid revision [${msg.revision}]`
-              )
-          );
+          cb(new Error(`[Serializer MID${msg.mid}] invalid revision [${msg.revision}]`));
           break;
     }
 
