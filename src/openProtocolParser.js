@@ -58,7 +58,7 @@ class OpenProtocolParser extends Transform {
         while (ptr < chunk.length) {
 
             if (chunk.length < ptr + 20) {
-                this._nBuffer = chunk;
+                this._nBuffer = chunk.slice(ptr);
                 cb();
                 return;
             }
