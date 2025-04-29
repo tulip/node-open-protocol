@@ -564,15 +564,13 @@ function processTraceSamples(
             for (var key in object) {
                 if (object[key].parameterName === value)
                     if (object[key].parameterID === "02213") {
+                        // Physical value = Binary value / Coefficient
                         coefficient = 1 / object[key].dataValue;
                     } else if (object[key].parameterID === "02214") {
+                        // Physical value = Binary value * Coefficient
                         coefficient = object[key].dataValue;
                     } else {
-                        cb(
-                            new Error(
-                                `invalid value, mid: ${message.mid}, parameter: ${object[key].parameterID}, payload: ${object[key].dataValue}`
-                            )
-                        );
+                        cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${object[key].parameterID}, payload: ${object[key].dataValue}`));
                         return false;
                     }
             }
@@ -589,13 +587,13 @@ function processTraceSamples(
         let multiplier = 0;
 
         if (unit === "200") {
-            multiplier = 1000; // ms
+            multiplier = 1000; // s
         } else if (unit === "201") {
-            multiplier = 60000; // ms
+            multiplier = 60000; // min
         } else if (unit === "202") {
             multiplier = 1; // ms
         } else if (unit === "203") {
-            multiplier = 3600000; // ms
+            multiplier = 3600000; // h
         } else {
             multiplier = 1;
         }
