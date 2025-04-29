@@ -136,7 +136,15 @@ function serializer(msg, opts, cb){
 
     switch (msg.revision) {
       case 1:
-          if (!msg.payload.traceTypes || msg.payload.traceTypes.length === 0) {
+          if (msg.payload && msg.payload.midNumber === 900 && msg.payload.extraData) {
+              // keep legacy behavior when user serializes their own MID 8 message.
+              msg.mid = 8;
+              msg.revision = 1;
+              msg.payload.dataLength = msg.payload.extraData.length;
+              return MID8.serializer(msg, {}, cb);
+          }
+
+          if (!msg.payload || !msg.payload.traceTypes || msg.payload.traceTypes.length === 0) {
               cb(new Error(`[Serializer MID${msg.mid}] no trace types provided`));
               return;
           }
