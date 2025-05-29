@@ -55,13 +55,13 @@ class OpenProtocolParser extends Transform {
             this._nBuffer = null;
         }
 
-        if (chunk.length < 20) {
-            this._nBuffer = chunk;
-            cb();
-            return;
-        }
-
         while (ptr < chunk.length) {
+
+            if (chunk.length < ptr + 20) {
+                this._nBuffer = chunk.slice(ptr);
+                cb();
+                return;
+            }
 
             let obj = {};
             let startPtr = ptr;
@@ -81,13 +81,16 @@ class OpenProtocolParser extends Transform {
                 return;
             }
 
-            if (chunk.length < (ptr + length + 1)) {
+            // For MID 0900 only, incoming data does not have a null terminator.
+            let mid900 = chunk.toString(encodingOP, ptr + 4, ptr + 8) === '0900';
+
+            if (chunk.length < (mid900 ? ptr + length : ptr + length + 1)) {
                 this._nBuffer = chunk.slice(ptr);
                 cb();
                 return;
             }
 
-            if (chunk[ptr + length] !== 0) {
+            if (chunk[ptr + length] !== 0 && !mid900) {
                 let e = new Error(`Invalid message [${chunk.toString()}]`);
                 e.errno = constants.ERROR_LINKLAYER.INVALID_LENGTH;
                 cb(e);
@@ -239,7 +242,8 @@ class OpenProtocolParser extends Transform {
 
             obj.payload = chunk.slice(ptr, (ptr + length - 20));
 
-            ptr += (length - 20) + 1;
+            ptr += length - 20;
+            if (!mid900) ptr += 1;
 
             if (this.rawData) {
                 obj._raw = chunk.slice(startPtr, ptr);
@@ -250,9 +254,9 @@ class OpenProtocolParser extends Transform {
         cb();
     }
 
-    _destroy() {
-        //no-op, needed to handle older node versions
-    }
+    // _destroy() {
+    //     //no-op, needed to handle older node versions
+    // }
 }
 
 module.exports = OpenProtocolParser;

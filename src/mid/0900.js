@@ -1,3 +1,4 @@
+//@ts-check
 /*
    Copyright 2018 Smart-Tech Controle e Automação
 
@@ -77,6 +78,11 @@ const testNul = helpers.testNul;
 const processParser = helpers.processParser;
 const processDataFields = helpers.processDataFields;
 const processResolutionFields = helpers.processResolutionFields;
+const processTraceSamples = helpers.processTraceSamples;
+const serializerField = helpers.serializerField;
+
+const MID5 = require("./0005.js");
+const MID8 = require("./0008.js");
 
 function parser(msg, opts, cb){
       
@@ -102,7 +108,7 @@ function parser(msg, opts, cb){
             processResolutionFields(msg, buffer, "resolutionFields", msg.payload.numberResolution, position, cb) &&
             processParser(msg, buffer, "numberTrace", "number", 5, position, cb) &&
             testNul(msg, buffer, "char nul", position, cb) &&          
-            processParser(msg, buffer, "traceSample", "string", 2, position, cb) &&
+            processTraceSamples(msg, buffer, "sampleTrace", msg.payload.numberTrace, position, msg.payload.timeStamp, msg.payload.resolutionFields[0].timeValue, msg.payload.resolutionFields[0].unit, cb) &&
             cb(null, msg);
 
         break;
@@ -110,104 +116,75 @@ function parser(msg, opts, cb){
 }
 
 function serializer(msg, opts, cb){
+    let extraData;
+    let statusprocess = false;
 
-    let info = msg.payload;
-    let buf;
+    let position = {
+        value: 0,
+    };
 
-    switch(msg.revision){
-      
-        case 1: 
+    if (msg.isAck) {
+        // MID 900 subscription data acknowledge should be sent as a MID 5 message.
+        msg.mid = 5;
+        msg.payload = {};
+        msg.payload.midNumber = 900;
+        msg.revision = 1;
+        return MID5.serializer(msg, {}, cb);
+    }
 
-            //Calc alloc
-            //Message Base (50)
-            //fieldPID
-            //fieldData (17 + length) x numberPID 
-            //resolutionFields (18 + length) x numberResolution
+    msg.revision = msg.revision || 1;
 
-            let size = 50;
+    switch (msg.revision) {
+      case 1:
+          if (msg.payload && msg.payload.midNumber === 900 && msg.payload.extraData) {
+              // keep legacy behavior when user serializes their own MID 8 message.
+              msg.mid = 8;
+              msg.revision = 1;
+              msg.payload.dataLength = msg.payload.extraData.length;
+              return MID8.serializer(msg, {}, cb);
+          }
 
-            if(info.dataFields.length > 0){
-                for(let x = 0; x < info.dataFields.length; x++){
-                    size += info.dataFields[x].length;                    
-                }
-            }
-            size += (17 * info.dataFields.length);
+          if (!msg.payload || !msg.payload.traceTypes || msg.payload.traceTypes.length === 0) {
+              cb(new Error(`[Serializer MID${msg.mid}] no trace types provided`));
+              return;
+          }
 
-            if(info.resolutionFields.length > 0){
-                for(let x = 0; x < info.resolutionFields.length; x++){
-                    size += info.resolutionFields[x].length;
-                }
-            }
-            size += (18 * info.resolutionFields.length);
+          // OpenProtocolSpecification_R280.pdf - Page 261
+          // [0]     - 0 = "Only send new data"
+          // [1-29]  - Data ID time stamp type, index type -- okay to leave blank
+          // [30-31] - Number of trace types
+          // [32..]  - Trace types (001, 002, ...)
+          extraData = Buffer.alloc(32 + msg.payload.traceTypes.length * 3);
+          extraData.write("0", 0);
+          extraData.fill(" ", 1, 30);
+          extraData.write(padLeft(msg.payload.traceTypes.length, 2, 10), 30);
+          for (let i = 0; i < msg.payload.traceTypes.length; i++) {
+              extraData.write(padLeft(msg.payload.traceTypes[i], 3, 10), 32 + i * 3);
+          }
 
-            buf = Buffer.alloc(size);
+          // MID 900 subscription request should be sent as a MID 8 message.
+          msg.mid = 8;
+          msg.payload = {};
+          msg.payload.midNumber = 900;
+          msg.payload.revision = 1;
+          msg.payload.dataLength = extraData.length;
+          msg.payload.extraData = extraData.toString('ascii');
+          msg.revision = 1;
+          return MID8.serializer(msg, {}, cb);
 
-            let pos = 0;
+      default:
+          cb(new Error(`[Serializer MID${msg.mid}] invalid revision [${msg.revision}]`));
+          break;
+    }
 
-            buf.write(padLeft(info.resultID, 10), pos, "ascii");
-            pos += 10;
+}
 
-            buf.write(padRight(info.timeStamp, 19, 10, " "), pos, "ascii");
-            pos += 19;
-
-            buf.write(padLeft(info.numberPID, 3), pos, "ascii");
-            pos += 3;
-
-            //info.dataFields
-            if(info.numberPID > 0){
-                for(let x = 0; x < info.numberPID; x++){
-                   
-                    buf.write(padLeft(info.dataFields[x].parameterID, 5), pos, "ascii");
-                    pos += 5;
-
-                    buf.write(padLeft(info.dataFields[x].length, 3), pos, "ascii");
-                    pos += 3;
-
-                    buf.write(padLeft(info.dataFields[x].dataType, 2), pos, "ascii");
-                    pos += 2;
-
-                    buf.write(padLeft(info.dataFields[x].unit, 3), pos, "ascii");
-                    pos += 3;
-
-                    buf.write(padLeft(info.dataFields[x].stepNumber, 4), pos, "ascii");
-                    pos += 4;
-
-                    buf.write(padRight(info.dataValue, info.dataFields[x].length, 10, " "), pos, "ascii");
-                    pos += info.dataFields[x].length;            
-                    
-                }
-            }
-
-            buf.write(padLeft(info.traceType, 2), pos, "ascii");
-            pos += 2;
-
-            buf.write(padLeft(info.transducerType, 2), pos, "ascii");
-            pos += 2;
-            
-            buf.write(padLeft(info.unit, 3), pos, "ascii");
-            pos += 3;
-
-            buf.write(padLeft(info.numberResolution, 3), pos, "ascii");
-            pos += 3;
-
-
-            
-
-
-
-
-
-
-        break;
-
-        }
-    
-    msg.payload = buf;
-
-    cb(null, msg);
+function revision() {
+    return [1];
 }
 
 module.exports = {
     parser, 
-    serializer
+    serializer,
+    revision
 };

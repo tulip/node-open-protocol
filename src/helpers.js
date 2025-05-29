@@ -65,16 +65,75 @@ function getMids() {
 
     midList = [];
 
-    const listFiles = fs.readdirSync(path.join(__dirname, ".", "mid"));
+    const listFiles = [
+        '0002',
+        '0003',
+        '0004',
+        '0005',
+        '0006',
+        '0008',
+        '0009',
+        '0010',
+        '0015',
+        '0018',
+        '0019',
+        '0020',
+        '0022',
+        '0025',
+        '0030',
+        '0035',
+        '0038',
+        '0039',
+        '0040',
+        '0042',
+        '0043',
+        '0044',
+        '0050',
+        '0052',
+        '0061',
+        '0064',
+        '0065',
+        '0071',
+        '0074',
+        '0076',
+        '0080',
+        '0081',
+        '0082',
+        '0091',
+        '0106',
+        '0113',
+        '0121',
+        '0127',
+        '0128',
+        '0131',
+        '0132',
+        '0133',
+        '0152',
+        '0155',
+        '0156',
+        '0157',
+        '0211',
+        '0242',
+        '0251',
+        '0260',
+        '0262',
+        '0270',
+        '0401',
+        '0410',
+        '0421',
+        '0501',
+        '0504',
+        '0900',
+        '2600',
+        '9997',
+        '9998',
+        '9999',
+    ];
 
     listFiles.forEach((file) => {
-
-        if (path.extname(file) !== ".js") {
-            return;
-        }
-
-        midList[Number(path.basename(file, ".js"))] = require("./mid/" + file);
-
+        try {
+            midList[Number(file)] = require('./mid/' + file + '.js');
+        } catch(err){}
     });
 
     return midList;
@@ -189,6 +248,9 @@ function processParser(message, buffer, parameter, parameterType, parameterLengt
     switch (parameterType) {
         case "string":
             message.payload[parameter] = buffer.toString(encoding, position.value, parameterLength).trim();
+            if (parameter === "unit") {
+                message.payload.unitName = codes.UNIT[message.payload[parameter]] || "Unknown";
+            }
             break;
 
         case "rawString":
@@ -204,6 +266,8 @@ function processParser(message, buffer, parameter, parameterType, parameterLengt
             if (isNaN(message.payload[parameter])) {
                 cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${parameter}, payload: ${message.payload}`));
                 return false;
+            } else if (parameter === "traceType") {
+                message.payload.traceTypeName = codes.TRACE_TYPE[message.payload[parameter]] || "Unknown";
             }
             break;
 
@@ -460,6 +524,109 @@ function processResolutionFields(message, buffer, parameter, count, position, cb
     return true;
 }
 
+/**
+ * @description This method performs the extraction of the trace, is perform [count] times,
+ * from the position [position.value], these structures are stored in an array on [message.payload[parameter]].
+ *
+ * The [cb] function is called in cases of error, sending the error as parameter.
+ * The return of this function is boolean, true: the process without errors or false: the process with an error.
+ *
+ * @see Specification OpenProtocol_Specification_R_2_8_0_9836 4415 01.pdf Page 260
+ *
+ * @param {object} message
+ * @param {buffer} buffer
+ * @param {string} parameter
+ * @param {number} count
+ * @param {object} position
+ * @param {string} timeStamp
+ * @param {number} timeValue
+ * @param {string} unit
+ * @param {function} cb
+ * @returns {boolean}
+ */
+function processTraceSamples(
+    message,
+    buffer,
+    parameter,
+    count,
+    position,
+    timeStamp,
+    timeValue,
+    unit,
+    cb
+) {
+    let control = 0;
+    let coefficient = 0;
+    message.payload[parameter] = [];
+
+    if (count > 0) {
+        function firstPropertyWithGivenValue(value, object) {
+            for (var key in object) {
+                if (object[key].parameterName === value)
+                    if (object[key].parameterID === "02213") {
+                        // Physical value = Binary value / Coefficient
+                        coefficient = 1 / object[key].dataValue;
+                    } else if (object[key].parameterID === "02214") {
+                        // Physical value = Binary value * Coefficient
+                        coefficient = object[key].dataValue;
+                    } else {
+                        cb(new Error(`invalid value, mid: ${message.mid}, parameter: ${object[key].parameterID}, payload: ${object[key].dataValue}`));
+                        return false;
+                    }
+            }
+            return coefficient;
+        }
+
+        firstPropertyWithGivenValue("Coefficient", message.payload.fieldData);
+
+        function toTimestamp(strDate) {
+            var datum = new Date(strDate);
+            return datum;
+        }
+
+        let multiplier = 0;
+
+        if (unit === "200") {
+            multiplier = 1000; // s
+        } else if (unit === "201") {
+            multiplier = 60000; // min
+        } else if (unit === "202") {
+            multiplier = 1; // ms
+        } else if (unit === "203") {
+            multiplier = 3600000; // h
+        } else {
+            multiplier = 1;
+        }
+
+        while (control < count) {
+            let traceSample = {};
+            traceSample.timeStamp = toTimestamp(timeStamp);
+            traceSample.value = buffer.toString(
+                "hex",
+                position.value,
+                position.value + 2
+            );
+            traceSample.value = parseInt(traceSample.value, 16);
+
+            if ((traceSample.value & 0x8000) > 0) {
+                traceSample.value = traceSample.value - 0x10000;
+            }
+
+            traceSample.value = traceSample.value * coefficient;
+
+            traceSample.timeStamp.setTime(
+                traceSample.timeStamp.getTime() + timeValue * multiplier * control
+            );
+
+            message.payload[parameter].push(traceSample);
+
+            position.value += 2;
+            control += 1;
+        }
+    }
+    return true;
+}
+
 module.exports = {
     getMids,
     testNul,
@@ -469,6 +636,7 @@ module.exports = {
     processParser,
     processDataFields,
     processResolutionFields: processResolutionFields,
+    processTraceSamples,
     serializerField,
     serializerKey
 };

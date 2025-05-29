@@ -345,5 +345,24 @@ describe("Open Protocol Parser", () => {
         // 002202400010        20[Null]
         parser.write('0039008100          2018-06-08:20:50:09\u0000');
     });
+
+    it('MID0900 - should parse nul delimiter correctly', (done) => {
+        let parser = new OpenProtocolParser();
+        parser.on('data', (data) => {
+            expect(data).to.be.deep.equal({
+                mid: 900,
+                revision: 1,
+                noAck: false,
+                stationID: 1,
+                spindleID: 1,
+                sequenceNumber: 0,
+                messageParts: 0,
+                messageNumber: 0,
+                payload: Buffer.from('hello\u0000world')
+            });
+            done();
+        });
+        parser.write('0031090000100101    hello\u0000world')
+    });
     
 });
