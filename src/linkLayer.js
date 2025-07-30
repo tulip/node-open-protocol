@@ -364,24 +364,21 @@ class LinkLayer extends Duplex {
         }
     }
 
-    _destroy() {
+    _destroy(err, cb) {
         debug("LinkLayer _destroy");
 
         clearTimeout(this.timer);
 
         function destroyStream(stream){
-            // handles Node versions older than 8.x
-            if (typeof stream.destroy === 'function') {
-                stream.destroy();
-            } else {
-                stream._destroy();
-            }
+            stream.destroy();
         }
 
         destroyStream(this.opParser);
         destroyStream(this.opSerializer);
         destroyStream(this.midParser);
         destroyStream(this.midSerializer);
+
+        cb(err);
     }
 
     finishCycle(err) {

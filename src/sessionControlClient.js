@@ -446,12 +446,7 @@ class SessionControlClient extends EventEmitter {
 
         this.autoRevision = {};
 
-        // handles Node versions older than 8.x
-        if(typeof this.ll.destroy === 'function'){
-            this.ll.destroy();
-        } else {
-            this.ll._destroy();
-        }
+        this.ll.destroy();
         this.stream.end();
 
         this.emit("close", err);
@@ -1114,10 +1109,6 @@ class SessionControlClient extends EventEmitter {
      */
     _onErrorLinkLayer(err) {
         debug('SessionControlClient _onErrorLinkLayer', err);
-
-        if (this.midInProcess) {
-            this.midInProcess.doCallback(err);
-        }
 
         this.emit("error", err);
         this.close(err);
