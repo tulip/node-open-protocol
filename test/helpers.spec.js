@@ -356,7 +356,7 @@ describe("Helpers", () => {
                         length: 2,
                         dataType: 5,
                         unit: "001",
-                        unitName: "N-m",
+                        unitName: "N·m",
                         stepNumber: 12,
                         dataValue: "AB"
                     },
@@ -418,7 +418,7 @@ describe("Helpers", () => {
                     length: 2,
                     dataType: 5,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     stepNumber: 12,
                     dataValue: "AB"
                 }]
@@ -451,7 +451,7 @@ describe("Helpers", () => {
                     length: 2,
                     dataType: 5,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     stepNumber: 12,
                     dataValue: "AB"
                 }]
@@ -484,7 +484,7 @@ describe("Helpers", () => {
                     length: 2,
                     dataType: 5,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     stepNumber: 12,
                     dataValue: "AB"
                 }]
@@ -517,7 +517,7 @@ describe("Helpers", () => {
                     length: 2,
                     dataType: 5,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     stepNumber: 12,
                     dataValue: "AB"
                 }]
@@ -550,7 +550,7 @@ describe("Helpers", () => {
                     length: 2,
                     dataType: 5,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     stepNumber: 12,
                     dataValue: "AB"
                 }]
@@ -583,7 +583,7 @@ describe("Helpers", () => {
                     length: 2,
                     dataType: 5,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     stepNumber: 12,
                     dataValue: "AB"
                 }]
@@ -616,7 +616,7 @@ describe("Helpers", () => {
                         length: 5,
                         dataType: 2,
                         unit: "001",
-                        unitName: "N-m",
+                        unitName: "N·m",
                         timeValue: "12345"
                     },
                     {
@@ -676,7 +676,7 @@ describe("Helpers", () => {
                     length: 5,
                     dataType: 2,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     timeValue: "12345"
                 }]
             }
@@ -708,7 +708,7 @@ describe("Helpers", () => {
                     length: 5,
                     dataType: 2,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     timeValue: "12345"
                 }]
             }
@@ -740,7 +740,7 @@ describe("Helpers", () => {
                     length: 5,
                     dataType: 2,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     timeValue: "12345"
                 }]
             }
@@ -772,7 +772,7 @@ describe("Helpers", () => {
                     length: 5,
                     dataType: 2,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     timeValue: "12345"
                 }]
             }
@@ -804,7 +804,7 @@ describe("Helpers", () => {
                     length: 5,
                     dataType: 2,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     timeValue: "12345"
                 }]
             }
@@ -836,7 +836,7 @@ describe("Helpers", () => {
                     length: 5,
                     dataType: 2,
                     unit: "001",
-                    unitName: "N-m",
+                    unitName: "N·m",
                     timeValue: "12345"
                 }]
             }
