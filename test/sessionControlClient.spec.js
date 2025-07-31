@@ -889,13 +889,11 @@ describe("Session Control Client", () => {
                     break;
 
                 case 8:
-
-                    let str = "002499970010010105000004\u0000";
-                    expect(str).to.be.deep.equal(data.toString("ascii"));
                     sessionControlClient.close();
-                    done();
-
                     step += 1;
+
+                    expect(data.toString("ascii")).to.be.deep.equal("002499970010010105000004\u0000");
+                    done();
                     break;
 
                 default:
