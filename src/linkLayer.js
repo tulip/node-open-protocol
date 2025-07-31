@@ -63,7 +63,9 @@ class LinkLayer extends Duplex {
         this.opParser = new OpenProtocolParser({
             rawData: opts.rawData
         });
-        this.opSerializer = new OpenProtocolSerializer();
+        this.opSerializer = new OpenProtocolSerializer({
+            desoutterCompatibilityMode: opts.desoutterCompatibilityMode,
+        });
         this.midParser = new MIDParser();
         this.midSerializer = new MIDSerializer();
         //Create instances of manipulators

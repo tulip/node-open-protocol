@@ -236,7 +236,7 @@ describe("Open Protocol Serializer", () => {
             done();
         });
 
-        //0023024000100101000020[Null]
+        //00230240001001010000250[Null]
 
         serializer.write({
             mid: 240,
@@ -247,6 +247,30 @@ describe("Open Protocol Serializer", () => {
             sequenceNumber: "  ",
             messageParts: " ",
             messageNumber: " ",
+            payload: "250"
+        });
+    });
+
+    it('should write spaces when desoutter compatibility mode is set', (done) => {
+        let serializer = new OpenProtocolSerializer({
+            desoutterCompatibilityMode: true,
+        });
+        serializer.on('data', (data) => {
+            expect(data).to.be.deep.equal(Buffer.from('002302400010    0000250\u0000'));
+            done();
+        });
+
+        //002302400010    0000250[Null]
+
+        serializer.write({
+            mid: 240,
+            revision: 1,
+            noAck: false,
+            stationID: 1,
+            spindleID: 1,
+            sequenceNumber: 0,
+            messageParts: 0,
+            messageNumber: 0,
             payload: "250"
         });
     });

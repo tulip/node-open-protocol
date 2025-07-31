@@ -198,7 +198,8 @@ class SessionControlClient extends EventEmitter {
             timeOut: opts.timeOut,
             retryTimes: opts.retryTimes,
             rawData: opts.rawData,
-            disableMidParsing: opts.disableMidParsing
+            disableMidParsing: opts.disableMidParsing,
+            desoutterCompatibilityMode: opts.desoutterCompatibilityMode,
         });
 
         this.ll.on("error", (err) => this._onErrorLinkLayer(err));
