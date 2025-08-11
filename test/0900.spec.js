@@ -107,4 +107,57 @@ describe("MID 0900", () => {
         });
     });
 
+    it("serializer with extradata", (done) => {
+        const msg = {
+            mid: 900,
+            revision: 1,
+            payload: {
+                midNumber: 900,
+                revision: 1,
+                extraData: "00000000000000000000000000000003001002005",
+                dataLength: 41,
+            },
+        };
+
+        MID.serializer(msg, {}, (err, data) => {
+
+            if (err) {
+                console.log(err);
+            }
+
+            expect(data).to.be.deep.equal({
+                mid: 8,
+                revision: 1,
+                payload: Buffer.from("09000014100000000000000000000000000000003001002005"),
+            });
+
+            done();
+        });
+    });
+
+    it("serializer rev 1", (done) => {
+        const msg = {
+            mid: 900,
+            revision: 1,
+            payload: {
+                traceTypes: [1, 2, 5],
+            },
+        };
+
+        MID.serializer(msg, {}, (err, data) => {
+
+            if (err) {
+                console.log(err);
+            }
+
+            expect(data).to.be.deep.equal({
+                mid: 8,
+                revision: 1,
+                payload: Buffer.from("0900001410                             03001002005")
+            });
+
+            done();
+        });
+    });
+
 });
