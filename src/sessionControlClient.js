@@ -839,7 +839,7 @@ class SessionControlClient extends EventEmitter {
             }
         }
 
-        if (this.midInProcess.midRevision === 0) {
+        if (!this.midInProcess || this.midInProcess.midRevision === 0) {
             this.inOperation = false;
             this._sendingProcess();
             return;
@@ -869,52 +869,6 @@ class SessionControlClient extends EventEmitter {
             mid = mid || this.midInProcess.midNumber;
             type = type || this.midInProcess.type;
             group = group || this.midInProcess.group;
-        }
-
-        if (this.changeRevision) {
-
-            if (!this.changeRevisionGeneric) {
-
-                if (this.midInProcess.baseMidRevision !== undefined || this.defaultRevisions[mid] !== undefined || this.autoRevision[mid].reference === 0) {
-                    let e = new Error(`[Session Control Client] invalid revision, MID[${mid}], Revision [${this.autoRevision[mid].value}]`);
-                    debug('SessionControlClient _calcRevision err_invalid_revision', this.midInProcess.baseMidRevision, this.defaultRevisions[mid], this.autoRevision[mid].reference);
-                    this.midInProcess.doCallback(e, null);
-                    return 0;
-                }
-
-            } else {
-
-                mid = this.midInProcess.baseGenericMid;
-
-                if (!this.autoRevision[mid] || this.autoRevision[mid].reference === 0) {
-                    let e = new Error(`[Session Control Client] invalid generic revision, MID[${mid}], Revision [${this.autoRevision[mid].value}]`);
-                    debug('SessionControlClient _calcRevision err_generic_revision', mid, this.autoRevision[mid]);
-                    this.midInProcess.doCallback(e, null);
-                    return 0;
-                }
-            }
-
-            if (type === SUBSCRIBE) {
-                midReference = this.autoRevision[mid].reference;
-            }
-
-            if (type === REQUEST) {
-                midReference = this.autoRevision[mid].reference;
-            }
-
-            let position = this.autoRevision[mid].position + 1;
-            revision = mids[midReference].revision()[position];
-
-            this.autoRevision[mid] = {
-                value: revision,
-                position: position,
-                reference: midReference
-            };
-
-            this.changeRevision = false;
-            this.changeRevisionGeneric = false;
-
-            return revision || 0;
         }
 
         if (local === true || this.midInProcess.baseMidRevision === undefined) {
@@ -954,6 +908,55 @@ class SessionControlClient extends EventEmitter {
 
         } else {
             revision = this.midInProcess.midRevision;
+        }
+
+        if (this.changeRevision) {
+
+            if (!this.changeRevisionGeneric) {
+
+                if (!this.autoRevision[mid] || this.autoRevision[mid].reference === 0) {
+                    let e = new Error(`[Session Control Client] invalid revision, MID[${mid}], Revision [${revision}]`);
+                    debug('SessionControlClient _calcRevision err_invalid_revision', mid, this.midInProcess.baseMidRevision, this.defaultRevisions[mid], this.autoRevision[mid]);
+                    this.midInProcess.doCallback(e, null);
+                    return 0;
+                }
+
+            } else {
+
+                mid = this.midInProcess.baseGenericMid;
+
+                if (!this.autoRevision[mid] || this.autoRevision[mid].reference === 0) {
+                    let e = new Error(`[Session Control Client] invalid generic revision, MID[${mid}], Revision [${revision}]`);
+                    debug('SessionControlClient _calcRevision err_generic_revision', mid, this.autoRevision[mid]);
+                    this.midInProcess.doCallback(e, null);
+                    return 0;
+                }
+            }
+
+            if (type === SUBSCRIBE) {
+                midReference = this.autoRevision[mid].reference;
+            }
+
+            if (type === REQUEST) {
+                midReference = this.autoRevision[mid].reference;
+            }
+
+            let position = this.autoRevision[mid].position + 1;
+            if (mids[midReference] === undefined) {
+                revision = 1;
+                midReference = 0;
+            } else {
+                revision = mids[midReference].revision()[position];
+            }
+
+            this.autoRevision[mid] = {
+                value: revision,
+                position: position,
+                reference: midReference
+            };
+
+            this.changeRevision = false;
+            this.changeRevisionGeneric = false;
         }
 
         return revision || 0;
