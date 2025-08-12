@@ -992,4 +992,44 @@ describe("Session Control Client", () => {
         sessionControlClient.connect();
     });
 
+    it("Should emit error properly for unsupported revision", (done) => {
+
+        let step = 0;
+
+        let stream = createStreamHelper((data) => {
+
+            switch (step) {
+                case 0:
+                    step++;
+                    stream.push(Buffer.from("00570002001000000000010001020103Airbag1                  \u0000"));
+                    break;
+
+              case 1:
+                    step++;
+                    stream.push(Buffer.from("00260004001000000000003897\u0000"));
+                    break;
+            }
+        });
+
+        let sessionControlClient = new SessionControlClient({
+            stream: stream
+        });
+
+
+        sessionControlClient.on("error", (error) => {
+            console.log(" Receiver Error", error);
+            throw error;
+        });
+
+        sessionControlClient.on("connect", (data) => {
+            sessionControlClient.command('selectJob', { revision: 2, payload: { jobID: 1234 } }, (err) => {
+                expect(err).to.be.an('error');
+                sessionControlClient.close();
+                done();
+            });
+        });
+
+        sessionControlClient.connect();
+    });
+
 });
