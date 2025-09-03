@@ -979,8 +979,7 @@ class SessionControlClient extends EventEmitter {
         this.request("keepAlive", (err) => {
             if (err) {
                 debug('SessionControlClient _sendKeepAlive response-error', err);
-                clearTimeout(this.keepAliveTimer);
-                this.close();
+                process.nextTick(() => this.close());
             }
         });
     }
@@ -1113,6 +1112,10 @@ class SessionControlClient extends EventEmitter {
      */
     _onErrorLinkLayer(err) {
         debug('SessionControlClient _onErrorLinkLayer', err);
+
+        if (this.midInProcess) {
+            this.midInProcess.doCallback(err);
+        }
 
         this.emit("error", err);
         this.close(err);

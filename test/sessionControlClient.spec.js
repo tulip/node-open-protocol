@@ -1032,4 +1032,31 @@ describe("Session Control Client", () => {
         sessionControlClient.connect();
     });
 
+    it("Should pass error to callback when retry fails", (done) => {
+        let step = 0;
+        let stream = createStreamHelper((data) => {
+            switch (step) {
+                case 0:
+                    step++;
+                    stream.push(Buffer.from("00570002001000000000010001020103Airbag1                  \u0000"));
+                    break;
+            }
+        });
+
+        let sessionControlClient = new SessionControlClient({
+            stream: stream,
+            timeOut: 300,
+        });
+
+        sessionControlClient.on("connect", (data) => {
+            sessionControlClient.command('selectJob', { payload: { jobID: 24 } }, (err) => {
+                expect(err).to.be.an('error');
+                sessionControlClient.close();
+                done();
+            });
+        });
+
+        sessionControlClient.connect();
+    });
+
 });
