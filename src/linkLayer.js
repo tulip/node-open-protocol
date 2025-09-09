@@ -63,7 +63,9 @@ class LinkLayer extends Duplex {
         this.opParser = new OpenProtocolParser({
             rawData: opts.rawData
         });
-        this.opSerializer = new OpenProtocolSerializer();
+        this.opSerializer = new OpenProtocolSerializer({
+            desoutterCompatibilityMode: opts.desoutterCompatibilityMode,
+        });
         this.midParser = new MIDParser();
         this.midSerializer = new MIDSerializer();
         //Create instances of manipulators
@@ -370,12 +372,7 @@ class LinkLayer extends Duplex {
         clearTimeout(this.timer);
 
         function destroyStream(stream){
-            // handles Node versions older than 8.x
-            if (typeof stream.destroy === 'function') {
-                stream.destroy();
-            } else {
-                stream._destroy();
-            }
+            stream.destroy();
         }
 
         destroyStream(this.opParser);
