@@ -97,7 +97,7 @@ function parser(msg, opts, cb){
          
             processParser(msg, buffer, "resultID", "number", 10, position, cb) &&
             processParser(msg, buffer, "timeStamp", "string", 19, position, cb) &&
-            processParser(msg, buffer, "numberPID", "number", 3, position, cb) &&
+            processParser(msg, buffer, "numberPID", "number", 2, position, cb) &&
             processDataFields(msg, buffer, "fieldPID", msg.payload.numberPID, position, cb) &&
             processParser(msg, buffer, "traceType", "number", 2, position, cb) &&
             processParser(msg, buffer, "transducerType", "number", 2, position, cb) &&
