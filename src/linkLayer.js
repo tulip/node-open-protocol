@@ -44,6 +44,7 @@ class LinkLayer extends Duplex {
      * @param {number} opts.retryTimes
      * @param {boolean} opts.rawData
      * @param {boolean} opts.disableMidParsing
+     * @param {boolean} opts.desoutterCompatibilityMode
      */
     constructor(opts) {
         debug("new LinkLayer", opts);
@@ -112,6 +113,15 @@ class LinkLayer extends Duplex {
         this.opParser.on("data", (data) => this._onDataOpParser(data));
         this.midParser.on("data", (data) => this._onDataMidParser(data));
         //RECEIVER DATA
+    }
+
+    /**
+     * @description Enables or disables the Desoutter compatibility mode at runtime.
+     * @param {boolean} enabled
+     */
+    setDesoutterCompatibilityMode(enabled) {
+        debug("LinkLayer setDesoutterCompatibilityMode", enabled);
+        this.opSerializer.setDesoutterCompatibilityMode(enabled);
     }
 
     _onErrorSerializer(err) {

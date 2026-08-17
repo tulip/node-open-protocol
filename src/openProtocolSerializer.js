@@ -58,6 +58,17 @@ class OpenProtocolSerializer extends Transform {
         this.desoutterCompatibilityMode = opts.desoutterCompatibilityMode || false;
     }
 
+    /**
+     * @description Enables or disables the Desoutter compatibility mode at runtime.
+     * In this mode the stationID and spindleID header fields are serialized as
+     * blanks, as Desoutter controllers reject any other value.
+     * @param {boolean} enabled
+     */
+    setDesoutterCompatibilityMode(enabled) {
+        debug("openProtocolSerializer setDesoutterCompatibilityMode", enabled);
+        this.desoutterCompatibilityMode = !!enabled;
+    }
+
     _transform(chunk, encoding, cb) {
         debug("openProtocolSerializer _transform", chunk);
 

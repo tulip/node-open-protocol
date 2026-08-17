@@ -38,6 +38,9 @@ const REQUEST = "request";
 const MANUAL = "manual";
 const GENERIC = "generic";
 
+//Supplier code prefix reported by Desoutter controllers on MID 2
+const DESOUTTER_SUPPLIER_PREFIX = "DE";
+
 //Status Connect
 const CONN_NOT_CONNECT = 0;
 const CONN_CONNECTING = 1;
@@ -125,6 +128,7 @@ class SessionControlClient extends EventEmitter {
      * @param {object}  [opts.disableMidParsing = {}]
      * @param {number}  [opts.timeOut = 3000]
      * @param {number}  [opts.retryTimes = 3]
+     * @param {boolean} [opts.desoutterCompatibilityMode] true = always send blank stationID/spindleID / false = never / undefined = auto-detect from the supplier code of the MID 2 reply
      *
      * @example
      * // Instantiate SessionControlClient with default values
@@ -202,6 +206,11 @@ class SessionControlClient extends EventEmitter {
             desoutterCompatibilityMode: opts.desoutterCompatibilityMode,
         });
 
+        //Desoutter compatibility mode
+        //If the caller didn't take an explicit position, we auto-detect it on
+        //the MID 2 reply of the handshake. An explicit value is always honored.
+        this.autoDetectDesoutter = opts.desoutterCompatibilityMode === undefined;
+
         this.ll.on("error", (err) => this._onErrorLinkLayer(err));
 
         this.changeRevisionGeneric = false;
@@ -246,6 +255,42 @@ class SessionControlClient extends EventEmitter {
      */
     isLinkLayerActive() {
         return !!this.useLinkLayer;
+    }
+
+    /**
+     * @description Enables or disables the Desoutter compatibility mode at runtime.
+     * In this mode the stationID and spindleID header fields are sent as blanks,
+     * as Desoutter controllers reject any other value.
+     * @param {boolean} enabled
+     */
+    setDesoutterCompatibilityMode(enabled) {
+        debug("SessionControlClient setDesoutterCompatibilityMode", enabled);
+        this.ll.setDesoutterCompatibilityMode(enabled);
+    }
+
+    /**
+     * @description Turns on the Desoutter compatibility mode if the controller
+     * identified itself as a Desoutter one on the MID 2 reply. Never turns it
+     * off, so that an explicitly requested mode can't be undone by a controller
+     * that reports an unexpected supplier code.
+     * @private
+     * @param {object} data the MID 2 message
+     */
+    _detectDesoutter(data) {
+        if (!this.autoDetectDesoutter) {
+            return;
+        }
+
+        let supplierCode = data.payload && data.payload.supplierCode;
+
+        if (typeof supplierCode !== "string") {
+            return;
+        }
+
+        if (supplierCode.trim().toUpperCase().startsWith(DESOUTTER_SUPPLIER_PREFIX)) {
+            debug("SessionControlClient _detectDesoutter detected", supplierCode);
+            this.setDesoutterCompatibilityMode(true);
+        }
     }
 
     /**
@@ -357,6 +402,8 @@ class SessionControlClient extends EventEmitter {
                 */
 
                 this.ll.removeAllListeners();
+
+                this._detectDesoutter(data);
 
                 this.statusConnection = CONN_CONNECTED;
                 this.controllerData = data;

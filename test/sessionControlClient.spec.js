@@ -1059,4 +1059,105 @@ describe("Session Control Client", () => {
         sessionControlClient.connect();
     });
 
+    it("Should enable the desoutter compatibility mode when the supplier code starts with DE", (done) => {
+
+        let writes = [];
+        let sessionControlClient;
+
+        let stream = createStreamHelper((data) => {
+
+            writes.push(data);
+
+            if (writes.length === 1) {
+                //MID 2 revision 2, supplier code "DE3"
+                stream.push(Buffer.from("00620002002000000000010001020103Airbag1                  04DE3\u0000"));
+                return;
+            }
+
+            if (writes.length === 2) {
+                expect(data.toString("ascii", 12, 16)).to.be.equal("    ");
+                sessionControlClient.close();
+                done();
+            }
+        });
+
+        sessionControlClient = new SessionControlClient({
+            stream: stream
+        });
+
+        sessionControlClient.on("connect", (data) => {
+            expect(data.payload.supplierCode).to.be.equal("DE3");
+            sessionControlClient.sendMid(9999, {}, () => {});
+        });
+
+        sessionControlClient.connect();
+    });
+
+    it("Should keep sending the stationID and spindleID for a non desoutter supplier code", (done) => {
+
+        let writes = [];
+        let sessionControlClient;
+
+        let stream = createStreamHelper((data) => {
+
+            writes.push(data);
+
+            if (writes.length === 1) {
+                //MID 2 revision 2, supplier code "AC "
+                stream.push(Buffer.from("00620002002000000000010001020103Airbag1                  04AC \u0000"));
+                return;
+            }
+
+            if (writes.length === 2) {
+                expect(data.toString("ascii", 12, 16)).to.be.equal("0101");
+                sessionControlClient.close();
+                done();
+            }
+        });
+
+        sessionControlClient = new SessionControlClient({
+            stream: stream
+        });
+
+        sessionControlClient.on("connect", () => {
+            sessionControlClient.sendMid(9999, {}, () => {});
+        });
+
+        sessionControlClient.connect();
+    });
+
+    it("Should not auto detect the desoutter compatibility mode when it is explicitly disabled", (done) => {
+
+        let writes = [];
+        let sessionControlClient;
+
+        let stream = createStreamHelper((data) => {
+
+            writes.push(data);
+
+            if (writes.length === 1) {
+                //MID 2 revision 2, supplier code "DE3"
+                stream.push(Buffer.from("00620002002000000000010001020103Airbag1                  04DE3\u0000"));
+                return;
+            }
+
+            if (writes.length === 2) {
+                expect(data.toString("ascii", 12, 16)).to.be.equal("0101");
+                sessionControlClient.close();
+                done();
+            }
+        });
+
+        sessionControlClient = new SessionControlClient({
+            stream: stream,
+            desoutterCompatibilityMode: false
+        });
+
+        sessionControlClient.on("connect", () => {
+            sessionControlClient.sendMid(9999, {}, () => {});
+        });
+
+        sessionControlClient.connect();
+    });
+
 });
