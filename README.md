@@ -87,7 +87,14 @@ let options = {
     retryTimes: 3,
 
     // A list of MIDs for which we'll not parse the payload
-    disableMidParsing: {}
+    disableMidParsing: {},
+
+    // Weather to send the stationID and spindleID header fields as blanks,
+    // which is the only value Desoutter controllers accept
+    //true: enforce activation
+    //false: enforce deactivation
+    //undefined: auto detect from the supplier code of the MID 0002 reply
+    desoutterCompatibilityMode: undefined
 }
 
 let controllerIp = "127.0.0.1";

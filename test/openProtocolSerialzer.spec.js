@@ -275,4 +275,51 @@ describe("Open Protocol Serializer", () => {
         });
     });
 
+    it('should toggle the desoutter compatibility mode at runtime', (done) => {
+        let serializer = new OpenProtocolSerializer();
+        let received = [];
+
+        //00230240001001010000250[Null]
+        const normal = Buffer.from('00230240001001010000250 ');
+        //002302400010    0000250[Null]
+        const desoutter = Buffer.from('002302400010    0000250 ');
+
+        let write = () => serializer.write({
+            mid: 240,
+            revision: 1,
+            noAck: false,
+            stationID: 1,
+            spindleID: 1,
+            sequenceNumber: 0,
+            messageParts: 0,
+            messageNumber: 0,
+            payload: "250"
+        });
+
+        serializer.on('data', (data) => {
+            received.push(data);
+
+            switch (received.length) {
+                case 1:
+                    expect(data).to.be.deep.equal(normal);
+                    serializer.setDesoutterCompatibilityMode(true);
+                    write();
+                    break;
+
+                case 2:
+                    expect(data).to.be.deep.equal(desoutter);
+                    serializer.setDesoutterCompatibilityMode(false);
+                    write();
+                    break;
+
+                case 3:
+                    expect(data).to.be.deep.equal(normal);
+                    done();
+                    break;
+            }
+        });
+
+        write();
+    });
+
 });
